@@ -280,7 +280,9 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
 monitored_folder = ROOT_DIR.parent / "GTX_Archived"
 log_path = monitored_folder / "spectrum_analyser_log.txt"
 
-print(f"Watching folder: {monitored_folder}")
+print(f"# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v1.0 -------------------------- #")
+print("(Do not close this command window)")
+print(f"\nWatching folder: {monitored_folder}")
 
 
 # Updated wafer code extractor from LIV CSV filename
