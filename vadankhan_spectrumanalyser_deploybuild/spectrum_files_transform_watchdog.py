@@ -1,14 +1,11 @@
 import os
 import sys
-
-# import warnings
 from pathlib import Path
 import time
 import csv
-
-# import io
-# import re
 from datetime import datetime
+import threading
+
 
 # import threading
 # import multiprocessing
@@ -44,7 +41,7 @@ EXPORTS_FILE_PATH.mkdir(parents=True, exist_ok=True)
 sys.path.append(str(ROOT_DIR))
 
 
-ANALYSIS_RUN_NAME = "debug-watchdog-script"
+ANALYSIS_RUN_NAME = "PROCESSED_SPECTRA"
 
 SUBARU_DECODER = "QC WAFER_LAYOUT 24Dec.csv"
 HALO_DECODER = "HALO_DECODER_NE-rev1_1 logic_coords_annotated.csv"
@@ -260,7 +257,7 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
                     completed_labels = 0
 
         chunk_total = time.time() - chunk_start
-        print(f"Chunk {chunk_counter} Summary:")
+        print(f"{wafer_code}: Chunk {chunk_counter} Summary:")
         print(f"  Base transform: {base_time:.2f}s")
         print(f"  dB Calculation: {t_dB_total:.2f}s")
         print(f"  Peak Calculation Total: {t_peak_total:.2f}s")
@@ -287,13 +284,27 @@ print(f"Watching folder: {monitored_folder}")
 
 
 # Updated wafer code extractor from LIV CSV filename
-def extract_wafer_code_from_liv(folder_path):
+def extract_testinfo_from_liv(folder_path):
     for file in Path(folder_path).iterdir():
         if file.name.startswith("LIV_") and file.suffix == ".csv":
             parts = file.name.split("_")
-            if len(parts) > 1:
-                return parts[2]  # Adjust if the code position differs
-    return None
+            if len(parts) >= 3:
+                tool_name = parts[0] + "_" + parts[1]  # e.g., LIV_53
+                wafer_code = parts[2]  # e.g., QCI44
+
+                # Search for COD variants in the entire filename
+                filename_upper = file.name.upper()
+                if "COD250" in filename_upper:
+                    test_type = "COD250"
+                elif "COD70" in filename_upper:
+                    test_type = "COD70"
+                elif "COD" in filename_upper:
+                    test_type = "COD"
+                else:
+                    test_type = "UNKNOWN"
+
+                return tool_name, wafer_code, test_type
+    return None, None, None
 
 
 # Combined wait: wait for file to appear and become readable, MAX WAIT 300s
@@ -352,28 +363,40 @@ class WaferFileHandler(FileSystemEventHandler):
         if not event.is_directory:
             return
 
-        folder_path = Path(event.src_path)
-        detection_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        def analysis_job():
+            folder_path = Path(event.src_path)
+            detection_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        with open(log_path, "a", encoding="utf-8") as log_file:
-            log_file.write(f"[{detection_time}] Detected new folder: {folder_path.name}\n")
-
-        print(f"\nDetected new wafer folder: {folder_path.name}")
-
-        raw_csv_path = folder_path / "0_LIV_Pulse_Interval_Opt" / "Raw.csv"
-
-        if not wait_for_file_to_appear_and_be_readable(raw_csv_path):  # Function that Waits to only read when file fully copied over
-            message = f"Raw.csv did not appear or never became readable in: {folder_path.name}"
-            print(message)
             with open(log_path, "a", encoding="utf-8") as log_file:
-                log_file.write(f"[{detection_time}] ❌ {message}\n")
-            return
+                log_file.write(f"[{detection_time}] Detected new folder: {folder_path.name}\n")
 
-        wafer_code = extract_wafer_code_from_liv(folder_path)
-        print(f"Detected Wafer Code: {wafer_code}")
+            print(f"\nDetected new wafer folder: {folder_path.name}")
 
-        initialise_spectra_processing(wafer_code, detection_time, raw_csv_path)
-        print(f"\n\nWatching folder: {monitored_folder}")
+            raw_csv_path = folder_path / "0_LIV_Pulse_Interval_Opt" / "Raw.csv"
+
+            if not wait_for_file_to_appear_and_be_readable(raw_csv_path):  # Function that Waits to only read when file fully copied over
+                message = f"Raw.csv did not appear or never became readable in: {folder_path.name}"
+                print(message)
+                with open(log_path, "a", encoding="utf-8") as log_file:
+                    log_file.write(f"[{detection_time}] ❌ {message}\n")
+                return
+
+            tool_name, wafer_code, test_type = extract_testinfo_from_liv(folder_path)
+            print(f"Detected Tool: {tool_name}, Wafer Code: {wafer_code}, Test Type: {test_type}")
+
+            if test_type in ("COD70", "COD250"):
+                message = f"Skipping analysis for test type {test_type} in: {folder_path.name}"
+                print(message)
+                with open(log_path, "a", encoding="utf-8") as log_file:
+                    log_file.write(f"[{detection_time}] ⚠️ {message}\n")
+                print(f"\n\nWatching folder: {monitored_folder}")
+                return
+
+            initialise_spectra_processing(wafer_code, detection_time, raw_csv_path)
+            print(f"\n\nWatching folder: {monitored_folder}")
+
+        # Run the job in a background thread so Ctrl+C can still work
+        threading.Thread(target=analysis_job, daemon=True).start()
 
 
 # Watchdog setup
