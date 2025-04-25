@@ -290,7 +290,7 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
 monitored_folder = ROOT_DIR.parent / "GTX_Archived"
 log_path = monitored_folder / "spectrum_analyser_log.txt"
 
-print(f"# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v1.0 -------------------------- #")
+print(f"# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #")
 print("(Do not close this command window)")
 print(f"\nWatching folder: {monitored_folder}")
 
@@ -335,7 +335,7 @@ def wait_for_file_to_appear_and_be_readable(filepath, max_wait=300, delay=1):
             with open(filepath, "rb"):
                 return True
         except (PermissionError, FileNotFoundError):
-            print(f"Waiting for {filepath.name} to be ready... ({wait_time}s elapsed)")
+            print(f"Waiting for {filepath.name} to be ready... ({attempt}s elapsed)")
             time.sleep(delay)
     return False
 
