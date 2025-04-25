@@ -279,6 +279,7 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
         print(f"  Actual writing time: {t_actual_write_total:.2f}s")
         print(f"  Chunk total:    {chunk_total:.2f}s\n")
 
+    # final flush
     if peak_buffer:
         pd.DataFrame(peak_buffer).to_csv(peak_output_path, mode="a", header=False, index=False)
 
@@ -334,7 +335,7 @@ def wait_for_file_to_appear_and_be_readable(filepath, max_wait=300, delay=1):
             with open(filepath, "rb"):
                 return True
         except (PermissionError, FileNotFoundError):
-            print(f"Waiting for {filepath.name} to be ready... (attempt {attempt + 1})")
+            print(f"Waiting for {filepath.name} to be ready... ({wait_time}s elapsed)")
             time.sleep(delay)
     return False
 
