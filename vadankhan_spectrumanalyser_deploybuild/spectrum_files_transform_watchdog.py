@@ -403,11 +403,19 @@ class WaferFileHandler(FileSystemEventHandler):
                 print(message)
                 with open(log_path, "a", encoding="utf-8") as log_file:
                     log_file.write(f"[{detection_time}] ⚠️ {message}\n")
-                print(f"\n\nWatching folder: {monitored_folder}")
+                print(
+                    f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #"
+                )
+                print("(Do not close this command window)")
+                print(f"Watching folder: {monitored_folder}")
                 return
 
             initialise_spectra_processing(wafer_code, detection_time, raw_csv_path)
-            print(f"\n\nWatching folder: {monitored_folder}")
+            print(
+                f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #"
+            )
+            print("(Do not close this command window)")
+            print(f"Watching folder: {monitored_folder}")
 
         # Run the job in a background thread so Ctrl+C can still work
         threading.Thread(target=analysis_job, daemon=True).start()
