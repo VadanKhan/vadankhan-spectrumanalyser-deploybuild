@@ -54,7 +54,7 @@ def load_decoder(decoder_file_path):
 
     if not decoder_file_path.exists():
         print(f"Decoder file not found at {decoder_file_path}")
-        return pd.DataFrame()
+        raise ValueError("Decoder is empty")
 
     df_decoder = pd.read_csv(decoder_file_path, usecols=["Logic_X", "Logic_Y", "TE_LABEL", "TYPE"])
     df_decoder = df_decoder.set_index(["Logic_X", "Logic_Y"])
@@ -319,25 +319,34 @@ def extract_testinfo_from_liv(folder_path):
     return None, None, None
 
 
-# Combined wait: wait for file to appear and become readable, MAX WAIT 300s
-def wait_for_file_to_appear_and_be_readable(filepath, max_wait=300, delay=1):
+def wait_for_raw_csv_in_liv_folder(parent_folder, max_wait=300, delay=1):
+    """
+    Waits for any subfolder to appear inside parent_folder,
+    and for 'Raw.csv' to become readable inside that subfolder.
+    """
     wait_time = 0
-    while not filepath.exists() and wait_time < max_wait:
-        print(f"Waiting for {filepath.name} to appear... ({wait_time}s elapsed)")
+
+    while wait_time < max_wait:
+        subfolders = [sub for sub in parent_folder.iterdir() if sub.is_dir()]
+        if subfolders:
+            target_subfolder = subfolders[0]  # Assumes only one subfolder
+            raw_csv_path = target_subfolder / "Raw.csv"
+
+            if raw_csv_path.exists():
+                try:
+                    with open(raw_csv_path, "rb"):
+                        return raw_csv_path  # File exists and is readable
+                except (PermissionError, FileNotFoundError):
+                    print(f"Waiting for Raw.csv to be readable... ({wait_time}s elapsed)")
+            else:
+                print(f"Waiting for Raw.csv to appear in {target_subfolder.name}... ({wait_time}s elapsed)")
+        else:
+            print(f"Waiting for subfolder to appear in {parent_folder.name}... ({wait_time}s elapsed)")
+
         time.sleep(delay)
         wait_time += delay
 
-    if not filepath.exists():
-        return False
-
-    for attempt in range(max_wait):
-        try:
-            with open(filepath, "rb"):
-                return True
-        except (PermissionError, FileNotFoundError):
-            print(f"Waiting for {filepath.name} to be ready... ({attempt}s elapsed)")
-            time.sleep(delay)
-    return False
+    return False  # Timeout
 
 
 def initialise_spectra_processing(wafer_code, detection_time, file_path):
@@ -384,12 +393,10 @@ class WaferFileHandler(FileSystemEventHandler):
 
             print(f"\nDetected new wafer folder: {folder_path.name}")
 
-            raw_csv_path = folder_path / "0_LIV_Pulse_Interval_Opt" / "Raw.csv"
+            raw_csv_path = wait_for_raw_csv_in_liv_folder(folder_path)  # <-- store result here
 
-            if not wait_for_file_to_appear_and_be_readable(
-                raw_csv_path
-            ):  # Function that Waits to only read when file fully copied over
-                message = f"Raw.csv did not appear or never became readable in: {folder_path.name}"
+            if not raw_csv_path:
+                message = f"Raw.csv was never found or readable in: {folder_path.name}"
                 print(message)
                 with open(log_path, "a", encoding="utf-8") as log_file:
                     log_file.write(f"[{detection_time}] ❌ {message}\n")
