@@ -288,11 +288,18 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
 
 # ------------------------------------- Watchdog Calling Code ------------------------------------ #
 monitored_folder = ROOT_DIR.parent / "GTX_Archived"
-log_path = monitored_folder / "spectrum_analyser_log.txt"
+log_path = EXPORTS_FILE_PATH / "spectrum_analyser_log.txt"
 
-print(f"# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #")
-print("(Do not close this command window)")
-print(f"\nWatching folder: {monitored_folder}")
+
+def print_watcher_banner():
+    print(
+        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.2 -------------------------- #"
+    )
+    print("(Do not close this command window)")
+    print(f"Watching folder: {monitored_folder}")
+
+
+print_watcher_banner()
 
 
 # Updated wafer code extractor from LIV CSV filename
@@ -370,14 +377,6 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
         print(message)
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"[{detection_time}] ❌ {message}\n")
-
-
-def print_watcher_banner():
-    print(
-        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.2 -------------------------- #"
-    )
-    print("(Do not close this command window)")
-    print(f"Watching folder: {monitored_folder}")
 
 
 # Handler for new **folders**
