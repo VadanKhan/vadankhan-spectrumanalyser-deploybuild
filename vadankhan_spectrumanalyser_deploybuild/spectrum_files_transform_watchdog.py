@@ -354,16 +354,10 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
         product_code = wafer_code[:2]
         print(f"Extracted product code: {wafer_code}")
 
-        if product_code == "QC":
-            decoder_path = ROOT_DIR / "decoders" / SUBARU_DECODER
-        elif product_code in ("QD", "NV"):
+        if product_code in ("QD", "NV"):
             decoder_path = ROOT_DIR / "decoders" / HALO_DECODER
         else:
-            message = f"Unsupported product code: {product_code}"
-            print(message)
-            with open(log_path, "a", encoding="utf-8") as log_file:
-                log_file.write(f"[{detection_time}] {message}\n")
-            return
+            decoder_path = ROOT_DIR / "decoders" / SUBARU_DECODER
 
         decoder_df = load_decoder(decoder_path)
 
