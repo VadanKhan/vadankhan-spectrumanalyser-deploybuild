@@ -372,6 +372,14 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
             log_file.write(f"[{detection_time}] ❌ {message}\n")
 
 
+def print_watcher_banner():
+    print(
+        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.2 -------------------------- #"
+    )
+    print("(Do not close this command window)")
+    print(f"Watching folder: {monitored_folder}")
+
+
 # Handler for new **folders**
 class WaferFileHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -404,19 +412,11 @@ class WaferFileHandler(FileSystemEventHandler):
                 print(message)
                 with open(log_path, "a", encoding="utf-8") as log_file:
                     log_file.write(f"[{detection_time}] ⚠️ {message}\n")
-                print(
-                    f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #"
-                )
-                print("(Do not close this command window)")
-                print(f"Watching folder: {monitored_folder}")
+                print_watcher_banner()
                 return
 
             initialise_spectra_processing(wafer_code, detection_time, raw_csv_path)
-            print(
-                f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.1 -------------------------- #"
-            )
-            print("(Do not close this command window)")
-            print(f"Watching folder: {monitored_folder}")
+            print_watcher_banner()
 
         # Run the job in a background thread so Ctrl+C can still work
         threading.Thread(target=analysis_job, daemon=True).start()
