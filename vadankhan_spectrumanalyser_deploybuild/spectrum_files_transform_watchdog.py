@@ -361,6 +361,7 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
         product_code = wafer_code[:2]
         print(f"Extracted product code: {wafer_code}")
 
+        # Select decoder file based on product code
         if product_code in ("QD", "NV"):
             decoder_path = ROOT_DIR / "decoders" / HALO_DECODER
         else:
