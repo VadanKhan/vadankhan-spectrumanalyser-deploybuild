@@ -319,7 +319,7 @@ log_path = EXPORTS_FILE_PATH / "spectrum_analyser_log.txt"
 
 
 def print_watcher_banner():
-    print(f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.2 -------------------------- #")
+    print(f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.3 -------------------------- #")
     print("(Do not close this command window)")
     print(f"Watching folder: {monitored_folder}")
 
