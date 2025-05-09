@@ -90,8 +90,6 @@ def transform_raw_file(
             if i >= max_chunks:
                 break
 
-            chunk_start = time.time()
-
             # Base transformation
             t_base = time.time()
             long_df = chunk.melt(
@@ -228,6 +226,7 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
         t_peaks_breakdown = {}
         t_peak_total = 0
         t_actual_write_total = 0
+        t_gather_total = 0
 
         for te_label, group in chunk.groupby("TE_LABEL"):
             if te_label not in accumulator:

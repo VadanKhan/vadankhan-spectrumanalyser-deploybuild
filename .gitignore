@@ -2,3 +2,4 @@ decoders/
 .venv/
 wheels/
 poetry.lock
+PROCESSED_SPECTRA/
