@@ -197,14 +197,12 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
     print(f"\n=== Starting processing for {wafer_code} ===")
     total_t0 = time.time()
 
-    spectra_output_path = EXPORTS_FILE_PATH / f"{ANALYSIS_RUN_NAME}_{wafer_code}_formatted_spectra.csv"
     peak_output_path = EXPORTS_FILE_PATH / f"{ANALYSIS_RUN_NAME}_{wafer_code}_headlevel_SMSR.csv"
 
     accumulator = {}
     data_point_count = {}
     chunk_counter = 0
 
-    spectra_columns = ["TYPE", "TE_LABEL", "Wavelength", "Intensity", "dB_Intensity"]
     peak_columns = [
         "LOT",
         "TE_LABEL",
@@ -216,15 +214,11 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
         "SMSR_linear",
     ]
 
-    with open(spectra_output_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(spectra_columns)
     with open(peak_output_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(peak_columns)
 
     completed_labels = 0
-    spectra_buffer = []
     peak_buffer = []
 
     for chunk, data_points_threshold, base_time in transform_raw_file(filepath, wafer_code, decoder_df):
@@ -234,7 +228,6 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
         t_peaks_breakdown = {}
         t_peak_total = 0
         t_actual_write_total = 0
-        t_dB_total = 0
 
         for te_label, group in chunk.groupby("TE_LABEL"):
             if te_label not in accumulator:
@@ -245,23 +238,18 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
                 data_point_count[te_label] += len(group)
 
             if data_point_count[te_label] >= data_points_threshold:
+                t_gather_start = time.time()
                 full_data = pd.concat(accumulator[te_label], ignore_index=True)
-
-                # dB calculation
-                t_dB_start = time.time()
-                max_intensity = full_data["Intensity"].max()
-                safe_intensity = np.where(full_data["Intensity"] > 0, full_data["Intensity"], np.nan)
-                full_data["dB_Intensity"] = 10 * np.log10(safe_intensity / max_intensity)
-                t_dB_end = time.time()
-                t_dB_total += t_dB_end - t_dB_start
+                t_gather_end = time.time()
+                t_gather_total += t_gather_end - t_gather_start
 
                 # Peak extraction
                 t_peak_start = time.time()
-                peak_series, peak_times = extract_top_two_peaks(full_data)
+                peak_series, smsrs = extract_top_two_peaks(full_data)
                 t_peak_end = time.time()
                 t_peak_total += t_peak_end - t_peak_start
 
-                for k, v in peak_times.items():
+                for k, v in smsrs.items():
                     t_peaks_breakdown[k] = t_peaks_breakdown.get(k, 0.0) + v
 
                 # Assign TE_LABEL and LOT
@@ -272,31 +260,25 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
                 peak_series = peak_series[
                     ["LOT", "TE_LABEL"] + [col for col in peak_series.index if col not in {"LOT", "TE_LABEL"}]
                 ]
-
-                # add data into buffer
                 peak_buffer.append(peak_series)
-                spectra_buffer.append(full_data)
 
                 completed_labels += 1
                 del accumulator[te_label]
                 del data_point_count[te_label]
 
-                # Flush if 1000 TE_LABELs completed
                 if completed_labels >= 1000:
                     t_actual_write_start = time.time()
-                    pd.concat(spectra_buffer).to_csv(spectra_output_path, mode="a", header=False, index=False)
                     pd.DataFrame(peak_buffer).to_csv(peak_output_path, mode="a", header=False, index=False)
                     t_actual_write_end = time.time()
                     t_actual_write_total += t_actual_write_end - t_actual_write_start
 
-                    spectra_buffer.clear()
                     peak_buffer.clear()
                     completed_labels = 0
 
         chunk_total = time.time() - chunk_start
-        print(f"Chunk {chunk_counter} Summary:")
+        print(f"{wafer_code}: Chunk {chunk_counter} Summary:")
         print(f"  Base transform: {base_time:.2f}s")
-        print(f"  dB Calculation: {t_dB_total:.2f}s")
+        print(f"  Gather Laser Data Total: {t_gather_total:.2f}s")
         print(f"  Peak Calculation Total: {t_peak_total:.2f}s")
         print(f"  Peak detection breakdown:")
         for step, t in t_peaks_breakdown.items():
@@ -305,8 +287,6 @@ def process_export_and_peaks(filepath, wafer_code, decoder_df):
         print(f"  Chunk total:    {chunk_total:.2f}s\n")
 
     # Final flush
-    if spectra_buffer:
-        pd.concat(spectra_buffer).to_csv(spectra_output_path, mode="a", header=False, index=False)
     if peak_buffer:
         pd.DataFrame(peak_buffer).to_csv(peak_output_path, mode="a", header=False, index=False)
 
@@ -319,7 +299,9 @@ log_path = EXPORTS_FILE_PATH / "spectrum_analyser_log.txt"
 
 
 def print_watcher_banner():
-    print(f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.3 -------------------------- #")
+    print(
+        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.3 -------------------------- #"
+    )
     print("(Do not close this command window)")
     print(f"Watching folder: {monitored_folder}")
 
@@ -405,7 +387,7 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
             log_file.write(f"[{detection_time}] ❌ {message}\n")
 
 
-# Handler for new **folders**
+# Handler for new folders
 class WaferFileHandler(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory:
