@@ -33,7 +33,7 @@ ROOT_DIR = CURRENT_DIR
 
 # RAW_FILE_PATH = ROOT_DIR / "wavelength_spectra_files"
 # RAW_FILE_PATH.mkdir(parents=True, exist_ok=True)
-EXPORTS_FILE_PATH = ROOT_DIR.parent / "PROCESSED_SPECTRA"
+EXPORTS_FILE_PATH = ROOT_DIR / "PROCESSED_SPECTRA"
 EXPORTS_FILE_PATH.mkdir(parents=True, exist_ok=True)
 
 # Add the root directory to the system path
