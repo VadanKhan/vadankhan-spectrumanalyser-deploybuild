@@ -191,11 +191,11 @@ def extract_top_two_peaks(df_group):
     return peak_series, timing
 
 
-def process_export_and_peaks(filepath, wafer_code, decoder_df):
+def process_export_and_peaks(filepath, wafer_code, tool_name, decoder_df):
     print(f"\n=== Starting processing for {wafer_code} ===")
     total_t0 = time.time()
 
-    peak_output_path = EXPORTS_FILE_PATH / f"{ANALYSIS_RUN_NAME}_{wafer_code}_headlevel_SMSR.csv"
+    peak_output_path = EXPORTS_FILE_PATH / f"{ANALYSIS_RUN_NAME}_{tool_name}_{wafer_code}_headlevel_SMSR.csv"
 
     accumulator = {}
     data_point_count = {}
@@ -299,7 +299,7 @@ log_path = EXPORTS_FILE_PATH / "spectrum_analyser_log.txt"
 
 def print_watcher_banner():
     print(
-        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.3 -------------------------- #"
+        f"\n\n# --------------------------- LIV Automatic Spectra Analyser (Vadan Khan) v2.4 -------------------------- #"
     )
     print("(Do not close this command window)")
     print(f"Watching folder: {monitored_folder}")
@@ -362,7 +362,7 @@ def wait_for_raw_csv_in_liv_folder(parent_folder, max_wait=300, delay=1):
     return False  # Timeout
 
 
-def initialise_spectra_processing(wafer_code, detection_time, file_path):
+def initialise_spectra_processing(wafer_code, tool_name, detection_time, file_path):
     if wafer_code:
         product_code = wafer_code[:2]
         print(f"Extracted product code: {wafer_code}")
@@ -375,7 +375,7 @@ def initialise_spectra_processing(wafer_code, detection_time, file_path):
 
         decoder_df = load_decoder(decoder_path)
 
-        process_export_and_peaks(file_path, wafer_code, decoder_df)  # Main Spectra Processor
+        process_export_and_peaks(file_path, wafer_code, tool_name, decoder_df)  # Main Spectra Processor
 
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"[{detection_time}] ✅ Processed successfully: {file_path.name} (Wafer: {wafer_code})\n")
@@ -421,7 +421,7 @@ class WaferFileHandler(FileSystemEventHandler):
                 print_watcher_banner()
                 return
 
-            initialise_spectra_processing(wafer_code, detection_time, raw_csv_path)
+            initialise_spectra_processing(wafer_code, tool_name, detection_time, raw_csv_path)
             print_watcher_banner()
 
         # Run the job in a background thread so Ctrl+C can still work
